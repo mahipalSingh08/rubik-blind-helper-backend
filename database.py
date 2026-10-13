@@ -20,8 +20,15 @@ else:
 
 DB_NAME = os.getenv("DB_NAME", "algorithem")
 
-# Set 5-second connection timeout to avoid long 30s hangs on network/firewall issues
-client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+# Set 5-second connection timeout and use certifi CA certificates for TLS
+client_kwargs = {
+    "serverSelectionTimeoutMS": 5000,
+}
+if "mongodb+srv" in MONGO_URI or "ssl=true" in MONGO_URI.lower() or "tls=true" in MONGO_URI.lower():
+    import certifi
+    client_kwargs["tlsCAFile"] = certifi.where()
+
+client = MongoClient(MONGO_URI, **client_kwargs)
 db = client[DB_NAME]
 
 edge5_col = db["edge5"]
