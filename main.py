@@ -24,15 +24,17 @@ app = FastAPI(
 )
 
 # Enable CORS for Angular frontend / clients
-raw_origins = os.getenv("CORS_ORIGINS", "*")
+default_origins = "http://localhost:4200,http://127.0.0.1:4200,https://rubik-blind-helper.vercel.app"
+raw_origins = os.getenv("CORS_ORIGINS", default_origins)
 if raw_origins.strip() == "*":
     cors_origins = ["*"]
 else:
-    cors_origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+    cors_origins = [origin.strip().rstrip("/") for origin in raw_origins.split(",") if origin.strip()]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins if cors_origins else ["*"],
+    allow_origin_regex=r"https://rubik-blind-helper.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
