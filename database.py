@@ -30,6 +30,9 @@ corner5_col = db["corner5"]
 def init_indexes():
     """Ensure indexes on sequence, moves, and letters for fast search and O(1) lookups."""
     try:
+        print(f"[DB Startup] Verifying connection to MongoDB Atlas...")
+        client.admin.command('ping')
+        print(f"[DB Startup] Ping successful! Initializing indexes on '{DB_NAME}'...")
         edge5_col.create_index([("sequence", ASCENDING)], unique=True)
         edge5_col.create_index([("moves", ASCENDING)])
         edge5_col.create_index([("letters", ASCENDING)])
@@ -37,6 +40,7 @@ def init_indexes():
         corner5_col.create_index([("sequence", ASCENDING)], unique=True)
         corner5_col.create_index([("moves", ASCENDING)])
         corner5_col.create_index([("letters", ASCENDING)])
-        print(f"[DB] Indexes initialized successfully on database: {DB_NAME}")
+        print(f"[DB Startup] All indexes initialized successfully on database: {DB_NAME}")
     except Exception as e:
-        print(f"[DB Warning] Could not initialize indexes: {e}")
+        print(f"[DB Startup ERROR] Could not connect to MongoDB: {e}")
+        print("[DB Startup HINT] Ensure 0.0.0.0/0 is whitelisted in MongoDB Atlas Network Access and MONGO_URI is set in Render Environment.")

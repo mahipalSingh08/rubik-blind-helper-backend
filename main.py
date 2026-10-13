@@ -5,7 +5,8 @@ from dotenv import load_dotenv
 # Load local .env file if running locally
 load_dotenv()
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from database import edge5_col, corner5_col, init_indexes, client
 from models import (
@@ -40,6 +41,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# HTTP Request Logger Middleware for Render Logs
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    query_str = f"?{request.url.query}" if request.url.query else ""
+    full_path = f"{request.url.path}{query_str}"
+    print(f"[HTTP] --> {request.method} {full_path}", flush=True)
+    try:
+        response = await call_next(request)
+        print(f"[HTTP] <-- {request.method} {request.url.path} [{response.status_code}]", flush=True)
+        return response
+    except Exception as exc:
+        print(f"[HTTP ERROR] {request.method} {full_path} Exception: {exc}", flush=True)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": "Database/Server Error",
+                "detail": str(exc),
+                "hint": "Verify MongoDB Atlas Network Access has 0.0.0.0/0 whitelisted and MONGO_URI is set in Render Environment."
+            }
+        )
+
 # In-memory cache for ultra-fast pair queries
 # Format: { "piece_type:letter": [ {"pair": "AB", "total": 180, "moves_breakdown": {17: 79, ...}}, ... ] }
 _pairs_cache: Dict[str, List[dict]] = {}
@@ -49,6 +71,7 @@ EDGE_STARTING_LETTERS = ['A', 'B', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 
 
 @app.on_event("startup")
 def startup_db():
+    print("[Server Startup] Initializing database indexes...", flush=True)
     init_indexes()
 
 @app.get("/")
@@ -61,10 +84,12 @@ def root():
 
 @app.get("/health")
 def health_check():
+    print("[Health Check] Checking MongoDB Atlas connection...", flush=True)
     try:
         client.admin.command('ping')
         edges_count = edge5_col.count_documents({})
         corners_count = corner5_col.count_documents({})
+        print(f"[Health Check OK] Connected. {edges_count} edges, {corners_count} corners.", flush=True)
         return {
             "status": "healthy",
             "database": "connected",
@@ -75,11 +100,17 @@ def health_check():
             }
         }
     except Exception as e:
-        return {
-            "status": "degraded",
-            "database": "disconnected",
-            "error": str(e)
-        }
+        err = str(e)
+        print(f"[Health Check ERROR] MongoDB unreachable: {err}", flush=True)
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "unhealthy",
+                "database": "disconnected",
+                "error": err,
+                "hint": "Ensure 0.0.0.0/0 is whitelisted in MongoDB Atlas Network Access and MONGO_URI is set in Render Environment variables."
+            }
+        )
 
 def _get_collection(piece_type: str):
     t = piece_type.lower()
