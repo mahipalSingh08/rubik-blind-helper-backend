@@ -1,5 +1,10 @@
 import os
 from typing import Optional, List, Dict
+from dotenv import load_dotenv
+
+# Load local .env file if running locally
+load_dotenv()
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from database import edge5_col, corner5_col, init_indexes

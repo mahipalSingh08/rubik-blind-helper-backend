@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: rubik-blind-helper-backend
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: DB_NAME
+        value: algorithem
+      - key: CORS_ORIGINS
+        value: "*"
