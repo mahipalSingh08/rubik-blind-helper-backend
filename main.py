@@ -7,7 +7,7 @@ load_dotenv()
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from database import edge5_col, corner5_col, init_indexes
+from database import edge5_col, corner5_col, init_indexes, client
 from models import (
     FiveStyleAlgItem, 
     FiveStyleAlgUpdate, 
@@ -61,17 +61,25 @@ def root():
 
 @app.get("/health")
 def health_check():
-    edges_count = edge5_col.count_documents({})
-    corners_count = corner5_col.count_documents({})
-    return {
-        "status": "healthy",
-        "database": "connected",
-        "counts": {
-            "edges": edges_count,
-            "corners": corners_count,
-            "total": edges_count + corners_count
+    try:
+        client.admin.command('ping')
+        edges_count = edge5_col.count_documents({})
+        corners_count = corner5_col.count_documents({})
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "counts": {
+                "edges": edges_count,
+                "corners": corners_count,
+                "total": edges_count + corners_count
+            }
         }
-    }
+    except Exception as e:
+        return {
+            "status": "degraded",
+            "database": "disconnected",
+            "error": str(e)
+        }
 
 def _get_collection(piece_type: str):
     t = piece_type.lower()
