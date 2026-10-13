@@ -1,0 +1,15 @@
+__pycache__
+*.py[cod]
+*$py.class
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+venv/
+.venv/
+env/
+.idea/
+.vscode/
+*.md
+README.md
